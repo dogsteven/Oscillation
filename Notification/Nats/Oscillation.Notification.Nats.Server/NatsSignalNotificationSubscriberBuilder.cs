@@ -44,7 +44,7 @@ public class NatsSignalNotificationSubscriberBuilder
 
 public static class NatsSignalNotificationSubscriberHostingExtensions
 {
-    public static OscillationServerServiceConfigurator UseNats(
+    public static OscillationServerServiceConfigurator UseNatsNotification(
         this OscillationServerServiceConfigurator configurator,
         Action<IServiceProvider, NatsSignalNotificationSubscriberBuilder> configure)
     {

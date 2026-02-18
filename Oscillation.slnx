@@ -12,6 +12,10 @@
     <Project Path="Notification/Nats/Oscillation.Notification.Nats.Client/Oscillation.Notification.Nats.Client.csproj" />
     <Project Path="Notification/Nats/Oscillation.Notification.Nats.Server/Oscillation.Notification.Nats.Server.csproj" />
   </Folder>
+  <Folder Name="/Notification/Postgres/">
+    <Project Path="Notification/Postgres/Oscillation.Notification.Postgres.Client/Oscillation.Notification.Postgres.Client.csproj" />
+    <Project Path="Notification/Postgres/Oscillation.Notification.Postgres.Server/Oscillation.Notification.Postgres.Server.csproj" />
+  </Folder>
   <Folder Name="/Stores/" />
   <Folder Name="/Stores/EntityFrameworkCore/">
     <Project Path="Stores/EntityFrameworkCore/Oscillation.Stores.EntityFrameworkCore.Hosting/Oscillation.Stores.EntityFrameworkCore.Hosting.csproj" />
