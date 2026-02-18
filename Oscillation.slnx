@@ -8,6 +8,9 @@
     <Project Path="Hosting/Oscillation.Hosting.Server/Oscillation.Hosting.Server.csproj" />
   </Folder>
   <Folder Name="/Notification/" />
+  <Folder Name="/Notification/InMemory/">
+    <Project Path="Notification/InMemory/Oscillation.Notification.InMemory/Oscillation.Notification.InMemory.csproj" />
+  </Folder>
   <Folder Name="/Notification/Nats/">
     <Project Path="Notification/Nats/Oscillation.Notification.Nats.Client/Oscillation.Notification.Nats.Client.csproj" />
     <Project Path="Notification/Nats/Oscillation.Notification.Nats.Server/Oscillation.Notification.Nats.Server.csproj" />

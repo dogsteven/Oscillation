@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>netstandard2.1</TargetFramework>
+        <Nullable>enable</Nullable>
+
+        <PackageId>Oscillation.Notification.InMemory</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Khoa Huynh Bach</Authors>
+        <Description>In-memory notification hosting extension for Oscillation - a signal scheduling library</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
+      <PackageReference Include="Oscillation.Hosting.Server" Version="1.0.0" />
+      <PackageReference Include="System.Threading.Channels" Version="10.0.3" />
+    </ItemGroup>
+
+</Project>
