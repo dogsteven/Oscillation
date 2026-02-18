@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <PackageId>Oscillation.Stores.EntityFrameworkCore.Hosting</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Khoa Huynh Bach</Authors>
+        <Description>Entity Framework Core hosting extension for Oscillation - a signal scheduling library</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
+      <PackageReference Include="Oscillation.Hosting.Server" Version="1.0.0" />
+      <PackageReference Include="Oscillation.Stores.EntityFrameworkCore" Version="1.0.0" />
+    </ItemGroup>
+
+</Project>

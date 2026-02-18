@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <PackageId>Oscillation.Stores.EntityFrameworkCore</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Khoa Huynh Bach</Authors>
+        <Description>Entity Framework Core signal store for Oscillation - a signal scheduling library</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.24" />
+      <PackageReference Include="Oscillation.Core.Abstractions" Version="1.0.0" />
+    </ItemGroup>
+
+</Project>
