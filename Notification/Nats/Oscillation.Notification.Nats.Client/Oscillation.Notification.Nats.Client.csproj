@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net8.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+
+        <PackageId>Oscillation.Notification.Nats.Client</PackageId>
+        <Version>1.0.0</Version>
+        <Authors>Khoa Huynh Bach</Authors>
+        <Description>NATS client hosting extension for Oscillation - a signal scheduling library</Description>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="NATS.Net" Version="2.7.2" />
+      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
+    </ItemGroup>
+
+</Project>

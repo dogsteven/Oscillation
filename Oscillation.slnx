@@ -7,6 +7,11 @@
     <Project Path="Hosting/Oscillation.Hosting.Client/Oscillation.Hosting.Client.csproj" />
     <Project Path="Hosting/Oscillation.Hosting.Server/Oscillation.Hosting.Server.csproj" />
   </Folder>
+  <Folder Name="/Notification/" />
+  <Folder Name="/Notification/Nats/">
+    <Project Path="Notification/Nats/Oscillation.Notification.Nats.Client/Oscillation.Notification.Nats.Client.csproj" />
+    <Project Path="Notification/Nats/Oscillation.Notification.Nats.Server/Oscillation.Notification.Nats.Server.csproj" />
+  </Folder>
   <Folder Name="/Stores/" />
   <Folder Name="/Stores/EntityFrameworkCore/">
     <Project Path="Stores/EntityFrameworkCore/Oscillation.Stores.EntityFrameworkCore.Hosting/Oscillation.Stores.EntityFrameworkCore.Hosting.csproj" />
