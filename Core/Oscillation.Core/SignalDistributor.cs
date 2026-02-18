@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Oscillation.Core.Abstractions;
 using Oscillation.Core.Policies;
+using Oscillation.Core.Utilities;
 
 namespace Oscillation.Core
 {
@@ -18,7 +19,9 @@ namespace Oscillation.Core
         private readonly ITimeProvider _timeProvider;
         private readonly SemaphoreSlim _semaphore;
 
-        private int _runningFlag;
+        private readonly DetachedTaskTracker _detachedTaskTracker;
+
+        private long _runningFlag;
 
         private DateTime _nextPoll;
         private DateTime _minNextPoll;
@@ -35,6 +38,7 @@ namespace Oscillation.Core
             _distributorOptions = distributorOptions;
             _timeProvider = timeProvider;
             _semaphore = new SemaphoreSlim(1, 1);
+            _detachedTaskTracker = new DetachedTaskTracker();
             _runningFlag = 0;
             _nextPoll = DateTime.MaxValue;
             _minNextPoll = DateTime.MaxValue;
@@ -91,7 +95,8 @@ namespace Oscillation.Core
                     {
                         var (group, localId, payload) = distributionInfo;
                         
-                        _ = DistributeSignalAsync(group, localId, payload, CancellationToken.None);
+                        var distributeSignalTask = DistributeSignalAsync(group, localId, payload);
+                        _detachedTaskTracker.Track(distributeSignalTask);
                     }
 
                     var now = _timeProvider.UtcDateTimeNow;
@@ -105,6 +110,8 @@ namespace Oscillation.Core
                     _semaphore.Release();
                 }
             }
+            
+            await _detachedTaskTracker.WaitForAllAsync();
 
             _runningFlag = 0;
         }
@@ -119,8 +126,11 @@ namespace Oscillation.Core
             }
         }
 
-        private async Task DistributeSignalAsync(string group, Guid localId, string payload, CancellationToken cancellationToken)
+        private async Task DistributeSignalAsync(string group, Guid localId, string payload)
         {
+            var cancellationToken = CancellationToken.None;
+            var policy = await _distributionPolicyProvider.GetPolicyOrDefaultAsync(group, cancellationToken);
+            
             try
             {
                 await _distributionGateway.DistributeAsync(group, localId, payload, cancellationToken);
@@ -133,8 +143,7 @@ namespace Oscillation.Core
                     {
                         return;
                     }
-
-                    var policy = await _distributionPolicyProvider.GetPolicyOrDefaultAsync(signal.Group, cancellationToken);
+                    
                     var now = _timeProvider.UtcDateTimeNow;
 
                     signal.CompleteProcessing(now, policy.RetentionTimeout);
@@ -153,7 +162,6 @@ namespace Oscillation.Core
                         return;
                     }
 
-                    var policy = await _distributionPolicyProvider.GetPolicyOrDefaultAsync(signal.Group, cancellationToken);
                     var now = _timeProvider.UtcDateTimeNow;
 
                     if (signal.RetryAttempts >= policy.MaxRetryAttempts)
@@ -174,7 +182,7 @@ namespace Oscillation.Core
 
         public async Task AdjustNextPollAsync(DateTime potentialNextFireTime, CancellationToken cancellationToken)
         {
-            if (_runningFlag == 0)
+            if (Interlocked.Read(ref _runningFlag) == 0)
             {
                 return;
             }
