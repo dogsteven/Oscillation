@@ -3,4 +3,8 @@
     <Project Path="Core/Oscillation.Core.Abstractions/Oscillation.Core.Abstractions.csproj" />
     <Project Path="Core/Oscillation.Core/Oscillation.Core.csproj" />
   </Folder>
+  <Folder Name="/Hosting/">
+    <Project Path="Hosting/Oscillation.Hosting.Client/Oscillation.Hosting.Client.csproj" />
+    <Project Path="Hosting/Oscillation.Hosting.Server/Oscillation.Hosting.Server.csproj" />
+  </Folder>
 </Solution>
