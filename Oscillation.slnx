@@ -1,1 +1,6 @@
-<Solution />
+<Solution>
+  <Folder Name="/Core/">
+    <Project Path="Core/Oscillation.Core.Abstractions/Oscillation.Core.Abstractions.csproj" />
+    <Project Path="Core/Oscillation.Core/Oscillation.Core.csproj" />
+  </Folder>
+</Solution>
