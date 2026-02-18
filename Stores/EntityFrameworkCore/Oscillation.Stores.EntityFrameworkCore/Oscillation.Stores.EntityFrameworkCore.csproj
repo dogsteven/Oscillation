@@ -13,7 +13,10 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.24" />
-      <PackageReference Include="Oscillation.Core.Abstractions" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Client\Oscillation.Hosting.Client.csproj" />
     </ItemGroup>
 
 </Project>

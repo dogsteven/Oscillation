@@ -11,9 +11,12 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
-      <PackageReference Include="Oscillation.Hosting.Server" Version="1.0.0" />
       <PackageReference Include="System.Threading.Channels" Version="10.0.3" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Client\Oscillation.Hosting.Client.csproj" />
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Server\Oscillation.Hosting.Server.csproj" />
     </ItemGroup>
 
 </Project>

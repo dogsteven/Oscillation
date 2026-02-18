@@ -12,9 +12,13 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
-      <PackageReference Include="Oscillation.Hosting.Server" Version="1.0.0" />
       <PackageReference Include="Oscillation.Stores.EntityFrameworkCore" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Client\Oscillation.Hosting.Client.csproj" />
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Server\Oscillation.Hosting.Server.csproj" />
+      <ProjectReference Include="..\Oscillation.Stores.EntityFrameworkCore\Oscillation.Stores.EntityFrameworkCore.csproj" />
     </ItemGroup>
 
 </Project>

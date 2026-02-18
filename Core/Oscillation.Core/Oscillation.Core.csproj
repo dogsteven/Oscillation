@@ -11,7 +11,7 @@
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Oscillation.Core.Abstractions" Version="1.0.0" />
+      <ProjectReference Include="..\Oscillation.Core.Abstractions\Oscillation.Core.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

@@ -12,7 +12,10 @@
 
     <ItemGroup>
       <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.3" />
-      <PackageReference Include="Oscillation.Core.Abstractions" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Core\Oscillation.Core.Abstractions\Oscillation.Core.Abstractions.csproj" />
     </ItemGroup>
 
 </Project>

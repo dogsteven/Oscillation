@@ -2,6 +2,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Oscillation.Hosting.Client;
 using Oscillation.Hosting.Server;
 using Oscillation.Stores.EntityFrameworkCore.Abstractions;
+using Oscillation.Stores.EntityFrameworkCore.Hosting.Standalone;
 
 namespace Oscillation.Stores.EntityFrameworkCore.Hosting;
 
@@ -52,7 +53,7 @@ public static class EntityFrameworkCoreSignalStoreHostingExtensions
         });
     }
     
-    public static OscillationServerServiceConfigurator EntityFrameworkCoreSignalStore(
+    public static OscillationServerServiceConfigurator UseEntityFrameworkCoreSignalStore(
         this OscillationServerServiceConfigurator configurator,
         Action<EntityFrameworkCoreSignalStoreBuilder> configure)
     {

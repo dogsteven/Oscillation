@@ -13,7 +13,10 @@
 
     <ItemGroup>
       <PackageReference Include="NATS.Net" Version="2.7.2" />
-      <PackageReference Include="Oscillation.Hosting.Client" Version="1.0.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\..\Hosting\Oscillation.Hosting.Client\Oscillation.Hosting.Client.csproj" />
     </ItemGroup>
 
 </Project>
