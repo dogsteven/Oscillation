@@ -48,7 +48,7 @@ namespace Oscillation.Core
                             }
                             else
                             {
-                                var delay = TimeSpan.FromMilliseconds(policy.RetryPatterns[signal.RetryAttempts]);
+                                var delay = policy.RetryPatterns[signal.RetryAttempts];
 
                                 signal.FailProcessingAttempt(now, delay);
                             }

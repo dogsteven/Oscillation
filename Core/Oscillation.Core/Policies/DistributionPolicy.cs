@@ -5,7 +5,7 @@ namespace Oscillation.Core.Policies
 {
     public class DistributionPolicy
     {
-        public IReadOnlyList<int> RetryPatterns { get; set; } = null!;
+        public IReadOnlyList<TimeSpan> RetryPatterns { get; set; } = null!;
 
         public TimeSpan ProcessingTimeout { get; set; }
 

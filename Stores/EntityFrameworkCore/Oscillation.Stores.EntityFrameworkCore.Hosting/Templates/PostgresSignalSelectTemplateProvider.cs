@@ -68,15 +68,15 @@ public class PostgresSignalSelectTemplateProviderBuilder
         return this;
     }
 
-    public MySqlSignalSelectTemplateProvider Build()
+    public PostgresSignalSelectTemplateProvider Build()
     {
-        return new MySqlSignalSelectTemplateProvider(_schema, _prefix);
+        return new PostgresSignalSelectTemplateProvider(_schema, _prefix);
     }
 }
 
 public static class PostgresSignalSelectTemplateProviderHostingExtensions
 {
-    public static EntityFrameworkCoreSignalStoreBuilder UseMysqlSelectTemplateProvider(
+    public static EntityFrameworkCoreSignalStoreBuilder UsePostgresSelectTemplateProvider(
         this EntityFrameworkCoreSignalStoreBuilder builder,
         Action<IServiceProvider, PostgresSignalSelectTemplateProviderBuilder> configure)
     {
