@@ -21,6 +21,6 @@ public class NatsSignalNotificationPublisher : ISignalNotificationPublisher
 
     private async Task PublishPotentialNextFireTimeAsync(DateTime potentialNextFireTime)
     {
-        await _natsClient.PublishAsync(subject: _subject, data: potentialNextFireTime.ToString("0"));
+        await _natsClient.PublishAsync(subject: _subject, data: potentialNextFireTime.ToString("O"));
     }
 }

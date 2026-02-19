@@ -63,7 +63,7 @@ namespace Oscillation.Hosting.Server
             {
                 _signalNotificationSubscriber.RegisterHandler(new LambdaSignalNotificationHandler(potentialNextFireTime =>
                 {
-                    _ = signalDistributor.AdjustNextPollAsync(potentialNextFireTime, stoppingToken);
+                    _ = signalDistributor.AdjustNextPollTimeAsync(potentialNextFireTime, stoppingToken);
                 }));
             }
             

@@ -103,7 +103,7 @@ namespace Oscillation.Core
                     _minNextPoll = now.Add(_distributorOptions.MinPollInterval);
                     _nextPoll = now.Add(_distributorOptions.MaxPollInterval);
 
-                    _ = FetchNextFireTimeAsync(cancellationToken);
+                    await FetchNextFireTimeAsync(cancellationToken);
                 }
                 finally
                 {
@@ -122,7 +122,7 @@ namespace Oscillation.Core
 
             if (nextFireTime.HasValue)
             {
-                await AdjustNextPollAsync(nextFireTime.Value, cancellationToken);
+                AdjustNextPollTime(nextFireTime.Value);
             }
         }
 
@@ -180,7 +180,7 @@ namespace Oscillation.Core
             }
         }
 
-        public async Task AdjustNextPollAsync(DateTime potentialNextFireTime, CancellationToken cancellationToken)
+        public async Task AdjustNextPollTimeAsync(DateTime potentialNextFireTime, CancellationToken cancellationToken)
         {
             if (Interlocked.Read(ref _runningFlag) == 0)
             {
@@ -191,12 +191,17 @@ namespace Oscillation.Core
             {
                 await _semaphore.WaitAsync(cancellationToken);
 
-                _nextPoll = potentialNextFireTime < _minNextPoll ? _minNextPoll : potentialNextFireTime;
+                AdjustNextPollTime(potentialNextFireTime);
             }
             finally
             {
                 _semaphore.Release();
             }
+        }
+
+        private void AdjustNextPollTime(DateTime potentialNextFireTime)
+        {
+            _nextPoll = potentialNextFireTime < _minNextPoll ? _minNextPoll : potentialNextFireTime;
         }
 
         public void Dispose()
@@ -212,7 +217,10 @@ namespace Oscillation.Core
                 return;
             }
 
-            _semaphore.Dispose();
+            if (disposing)
+            {
+                _semaphore.Dispose();
+            }
 
             _disposed = true;
         }

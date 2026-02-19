@@ -11,7 +11,7 @@ public class NatsSignalNotificationSubscriber : ISignalNotificationSubscriber
     private readonly string _subject;
 
     private readonly ConcurrentBag<ISignalNotificationHandler> _handlers;
-    private int _runningFlag;
+    private long _runningFlag;
 
     public NatsSignalNotificationSubscriber(NatsClient natsClient, string subject)
     {
@@ -24,7 +24,7 @@ public class NatsSignalNotificationSubscriber : ISignalNotificationSubscriber
     
     public void RegisterHandler(ISignalNotificationHandler handler)
     {
-        if (_runningFlag == 0)
+        if (Interlocked.Read(ref _runningFlag) == 1)
         {
             return;
         }

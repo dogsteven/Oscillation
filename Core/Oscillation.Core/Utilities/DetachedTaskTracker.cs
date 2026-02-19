@@ -8,8 +8,7 @@ namespace Oscillation.Core.Utilities
     public class DetachedTaskTracker
     {
         private readonly ConcurrentDictionary<Task, int> _tasks;
-
-        private int _allowTrackingFlag;
+        private long _allowTrackingFlag;
 
         public DetachedTaskTracker()
         {
@@ -19,7 +18,7 @@ namespace Oscillation.Core.Utilities
 
         public void Track(Task task)
         {
-            if (Volatile.Read(ref _allowTrackingFlag) == 1)
+            if (Interlocked.Read(ref _allowTrackingFlag) == 1)
             {
                 return;
             }
@@ -37,7 +36,7 @@ namespace Oscillation.Core.Utilities
             }
             finally
             {
-                if (Volatile.Read(ref _allowTrackingFlag) == 1)
+                if (Interlocked.Read(ref _allowTrackingFlag) == 0)
                 {
                     _tasks.TryRemove(task, out _);
                 }

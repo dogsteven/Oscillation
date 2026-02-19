@@ -26,7 +26,7 @@ public class PostgresSignalNotificationPublisher : ISignalNotificationPublisher
 
         await using var command = new NpgsqlCommand("SELECT pg_notify(@Channel, @Payload)", connection);
         command.Parameters.AddWithValue("Channel", _channel);
-        command.Parameters.AddWithValue("Payload", potentialNextFireTime.ToString("0"));
+        command.Parameters.AddWithValue("Payload", potentialNextFireTime.ToString("O"));
 
         await command.ExecuteNonQueryAsync();
     }

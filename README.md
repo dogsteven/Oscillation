@@ -40,13 +40,11 @@ The requirement for `ISignalStore` can easily be fulfilled by providing an EF Co
 The only requirement left is `IDistributionGateway`, which varies a lot depending on the situation, so we decide to let users provide their own, which is easy enough if you are not a vibe coder.
 
 When these requirements are fulfilled, the only thing you need to do is running background jobs to run the following components:
-1. `SignalDistributor` is responsible for scheduling signals, you run `StartAsync` to start the loop, and run `StartAsync` on notification. Note that only one active `StartAsync` is allowed per `SignalDistributor` instance.
+1. `SignalDistributor` is responsible for scheduling signals, you run `StartAsync` to start the loop, and run `AdjustNextPollTimeAsync` on notification. Note that only one active `StartAsync` is allowed per `SignalDistributor` instance.
 2. `ZombieSignalProcessor` is responsible for processing zombie signals, you run `StartAsync` to start the loop. Unlike the `SignalDistributor`, you can have as many active `StartAsync` as you want.
 3. `DeadSignalProcessor` is responsible for processing dead signals, you run `StartAsync` to start the loop. Unlike the `SignalDistributor`, you can have as many active `StartAsync` as you want.
 
 How many instances to use and how each instance is configured is totally up to you.
-
-Currently, we haven't implemented graceful shutdown, this capability will available in the near future. 
 
 ## Hosting
 The repository provides a hosting framework to streamline the configuration.

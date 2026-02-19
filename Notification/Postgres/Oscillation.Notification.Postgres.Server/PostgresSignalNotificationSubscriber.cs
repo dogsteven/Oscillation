@@ -11,7 +11,7 @@ public class PostgresSignalNotificationSubscriber : ISignalNotificationSubscribe
     private readonly string _channel;
     
     private readonly ConcurrentBag<ISignalNotificationHandler> _handlers;
-    private int _runningFlag;
+    private long _runningFlag;
 
     public PostgresSignalNotificationSubscriber(string connectionString, string channel)
     {
@@ -24,7 +24,7 @@ public class PostgresSignalNotificationSubscriber : ISignalNotificationSubscribe
     
     public void RegisterHandler(ISignalNotificationHandler handler)
     {
-        if (_runningFlag == 0)
+        if (Interlocked.Read(ref _runningFlag) == 1)
         {
             return;
         }

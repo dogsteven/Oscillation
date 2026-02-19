@@ -57,7 +57,7 @@ namespace Oscillation.Notification.InMemory
         private readonly ChannelReader<DateTime> _centralChannelReader;
         
         private readonly ConcurrentBag<ISignalNotificationHandler> _handlers;
-        private int _runningFlag;
+        private long _runningFlag;
 
         public InMemorySignalNotificationSubscriber(ChannelReader<DateTime> centralChannelReader)
         {
@@ -69,7 +69,7 @@ namespace Oscillation.Notification.InMemory
         
         public void RegisterHandler(ISignalNotificationHandler handler)
         {
-            if (_runningFlag == 0)
+            if (Interlocked.Read(ref _runningFlag) == 1)
             {
                 return;
             }
