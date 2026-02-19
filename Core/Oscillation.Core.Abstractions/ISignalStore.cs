@@ -20,6 +20,7 @@ namespace Oscillation.Core.Abstractions
         public Task CleanDeadSignalsAsync(DateTime now, int maxCount, CancellationToken cancellationToken);
     
         public void Add(Signal signal);
+        public void Remove(Signal signal);
         public Task SaveChangesAsync(CancellationToken cancellationToken);
     }
 

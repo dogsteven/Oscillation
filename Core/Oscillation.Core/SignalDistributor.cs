@@ -139,7 +139,7 @@ namespace Oscillation.Core
                 {
                     var signal = await session.GetSignalAsync(group, localId, cancellationToken);
 
-                    if (signal == null || signal.DistributingStatus != SignalDistributingStatus.Processing)
+                    if (signal == null || signal.State != SignalState.Processing)
                     {
                         return;
                     }
@@ -157,7 +157,7 @@ namespace Oscillation.Core
                 {
                     var signal = await session.GetSignalAsync(group, localId, cancellationToken);
 
-                    if (signal == null || signal.DistributingStatus != SignalDistributingStatus.Processing)
+                    if (signal == null || signal.State != SignalState.Processing)
                     {
                         return;
                     }

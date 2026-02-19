@@ -26,7 +26,7 @@ public class MySqlSignalSelectTemplateProvider : ISignalSelectTemplateProvider
     {
         return $$"""
                     SELECT * FROM {{_tableName}} 
-                    WHERE `DistributingStatus` = 'Pending' AND `NextFireTime` <= {0} 
+                    WHERE `State` = 'Pending' AND `NextFireTime` <= {0} 
                     ORDER BY `NextFireTime` 
                     LIMIT {1} 
                     FOR UPDATE SKIP LOCKED
@@ -37,7 +37,7 @@ public class MySqlSignalSelectTemplateProvider : ISignalSelectTemplateProvider
     {
         return $$"""
                     SELECT * FROM {{_tableName}} 
-                    WHERE `DistributingStatus` = 'Processing' AND `ProcessingTimeout` <= {0} 
+                    WHERE `State` = 'Processing' AND `ProcessingTimeout` <= {0} 
                     ORDER BY `ProcessingTimeout` 
                     LIMIT {1} 
                     FOR UPDATE SKIP LOCKED

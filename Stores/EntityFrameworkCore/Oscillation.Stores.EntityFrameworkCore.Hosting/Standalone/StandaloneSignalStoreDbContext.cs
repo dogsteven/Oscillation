@@ -57,8 +57,8 @@ public class SignalEntityConfiguration : IEntityTypeConfiguration<Signal>
             .HasColumnName("FireTime")
             .IsRequired();
 
-        builder.Property(signal => signal.DistributingStatus)
-            .HasColumnName("DistributingStatus")
+        builder.Property(signal => signal.State)
+            .HasColumnName("State")
             .IsRequired()
             .HasConversion<string>();
 
@@ -82,10 +82,10 @@ public class SignalEntityConfiguration : IEntityTypeConfiguration<Signal>
             .HasColumnName("DeadTime")
             .IsRequired(false);
         
-        builder.HasIndex(signal => new { signal.DistributingStatus, signal.NextFireTime });
+        builder.HasIndex(signal => new { DistributingStatus = signal.State, signal.NextFireTime });
 
         builder.HasIndex(signal => signal.DeadTime);
 
-        builder.HasIndex(signal => new { signal.DistributingStatus, signal.ProcessingTimeout });
+        builder.HasIndex(signal => new { DistributingStatus = signal.State, signal.ProcessingTimeout });
     }
 }

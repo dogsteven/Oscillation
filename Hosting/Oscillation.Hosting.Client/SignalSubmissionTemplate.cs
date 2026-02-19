@@ -56,6 +56,25 @@ namespace Oscillation.Hosting.Client
                 _signalNotificationPublisher.PublishPotentialNextFireTime(potentialNextFireTime.Value);
             }
         }
+
+        public async Task<bool> TryCancelAsync(string group, Guid localId, CancellationToken cancellationToken)
+        {
+            return await _signalStore.RunSessionAsync(async session =>
+            {
+                var signal = await session.GetSignalAsync(group, localId, cancellationToken);
+
+                if (signal == null || signal.State != SignalState.Pending)
+                {
+                    return false;
+                }
+                
+                session.Remove(signal);
+                
+                await session.SaveChangesAsync(cancellationToken);
+
+                return true;
+            }, cancellationToken);
+        }
     }
 
     public readonly struct SignalSubmission

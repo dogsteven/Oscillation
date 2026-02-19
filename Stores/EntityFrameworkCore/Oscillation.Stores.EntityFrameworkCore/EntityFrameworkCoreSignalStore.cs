@@ -102,7 +102,7 @@ public class EntityFrameworkCoreSignalStoreSession : ISignalStoreSession
     public async Task<DateTime?> GetNextFireTimeAsync(CancellationToken cancellationToken)
     {
         return await _dbContext.Signals.AsNoTracking()
-            .Where(signal => signal.DistributingStatus == SignalDistributingStatus.Pending)
+            .Where(signal => signal.State == SignalState.Pending)
             .MinAsync(signal => (DateTime?)signal.NextFireTime, cancellationToken);
     }
 
@@ -116,7 +116,7 @@ public class EntityFrameworkCoreSignalStoreSession : ISignalStoreSession
         }
         
         return await _dbContext.Signals
-            .Where(signal => signal.DistributingStatus == SignalDistributingStatus.Pending && signal.NextFireTime <= now)
+            .Where(signal => signal.State == SignalState.Pending && signal.NextFireTime <= now)
             .OrderBy(signal => signal.NextFireTime)
             .Take(maxCount)
             .ToListAsync(cancellationToken);
@@ -132,7 +132,7 @@ public class EntityFrameworkCoreSignalStoreSession : ISignalStoreSession
         }
         
         return await _dbContext.Signals
-            .Where(signal => signal.DistributingStatus == SignalDistributingStatus.Processing && signal.ProcessingTimeout != null && signal.ProcessingTimeout <= now)
+            .Where(signal => signal.State == SignalState.Processing && signal.ProcessingTimeout != null && signal.ProcessingTimeout <= now)
             .OrderBy(signal => signal.ProcessingTimeout)
             .Take(maxCount)
             .ToListAsync(cancellationToken);
@@ -149,6 +149,11 @@ public class EntityFrameworkCoreSignalStoreSession : ISignalStoreSession
     public void Add(Signal signal)
     {
         _dbContext.Signals.Add(signal);
+    }
+
+    public void Remove(Signal signal)
+    {
+        _dbContext.Signals.Remove(signal);
     }
 
     public async Task SaveChangesAsync(CancellationToken cancellationToken)

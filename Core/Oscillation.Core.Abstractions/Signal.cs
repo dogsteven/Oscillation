@@ -12,7 +12,7 @@ namespace Oscillation.Core.Abstractions
 
         public readonly DateTime FireTime;
 
-        public SignalDistributingStatus DistributingStatus { get; private set; }
+        public SignalState State { get; private set; }
 
         public DateTime NextFireTime { get; private set; }
 
@@ -34,7 +34,7 @@ namespace Oscillation.Core.Abstractions
             LocalId = localId;
             Payload = payload;
             FireTime = fireTime;
-            DistributingStatus = SignalDistributingStatus.Pending;
+            State = SignalState.Pending;
             NextFireTime = fireTime;
             ProcessingTimeout = null;
             RetryAttempts = 0;
@@ -43,23 +43,23 @@ namespace Oscillation.Core.Abstractions
 
         public void AttemptProcessing(DateTime now, TimeSpan processingTimeout)
         {
-            if (DistributingStatus != SignalDistributingStatus.Pending)
+            if (State != SignalState.Pending)
             {
                 throw new InvalidOperationException("Signal is not in pending status.");
             }
 
-            DistributingStatus = SignalDistributingStatus.Processing;
+            State = SignalState.Processing;
             ProcessingTimeout = now.Add(processingTimeout);
         }
 
         public void FailProcessingAttempt(DateTime now, TimeSpan delay)
         {
-            if (DistributingStatus != SignalDistributingStatus.Processing)
+            if (State != SignalState.Processing)
             {
                 throw new InvalidOperationException("Signal is not in processing status.");
             }
 
-            DistributingStatus = SignalDistributingStatus.Pending;
+            State = SignalState.Pending;
             ProcessingTimeout = null;
             NextFireTime = now.Add(delay);
             RetryAttempts++;
@@ -67,12 +67,12 @@ namespace Oscillation.Core.Abstractions
 
         public void CompleteProcessing(DateTime now, TimeSpan retentionTimeout)
         {
-            if (DistributingStatus != SignalDistributingStatus.Processing)
+            if (State != SignalState.Processing)
             {
                 throw new InvalidOperationException("Signal is not in processing status.");
             }
 
-            DistributingStatus = SignalDistributingStatus.Success;
+            State = SignalState.Success;
             ProcessingTimeout = null;
             FinalizedTime = now;
             DeadTime = now.Add(retentionTimeout);
@@ -80,19 +80,19 @@ namespace Oscillation.Core.Abstractions
 
         public void FailProcessing(DateTime now, TimeSpan retentionTimeout)
         {
-            if (DistributingStatus != SignalDistributingStatus.Processing)
+            if (State != SignalState.Processing)
             {
                 throw new InvalidOperationException("Signal is not in processing status.");
             }
 
-            DistributingStatus = SignalDistributingStatus.Failed;
+            State = SignalState.Failed;
             ProcessingTimeout = null;
             FinalizedTime = now;
             DeadTime = now.Add(retentionTimeout);
         }
     }
 
-    public enum SignalDistributingStatus
+    public enum SignalState
     {
         Pending,
         Processing,
