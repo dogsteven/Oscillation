@@ -51,6 +51,8 @@ namespace Oscillation.Core
                 return;
             }
 
+            _ = _detachedTaskTracker.StartAsync();
+
             var random = new Random();
 
             _nextPoll = _timeProvider.UtcDateTimeNow.Add(TimeSpan.FromSeconds(2.0 + random.NextDouble() * 3.0));

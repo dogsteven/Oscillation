@@ -1,31 +1,49 @@
-using System.Collections.Concurrent;
-using System.Linq;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace Oscillation.Core.Utilities
 {
     public class DetachedTaskTracker
     {
-        private readonly ConcurrentDictionary<Task, int> _tasks;
-        private long _allowTrackingFlag;
+        private readonly Channel<Task> _requestChannel;
+        private readonly TaskCompletionSource<bool> _channelCompletionSource;
+        private volatile TaskCompletionSource<bool>? _allTasksCompletionSource;
+
+        private long _numberOfUnsettledTasks;
 
         public DetachedTaskTracker()
         {
-            _tasks = new ConcurrentDictionary<Task, int>();
-            _allowTrackingFlag = 0;
+            _requestChannel = Channel.CreateUnbounded<Task>(new UnboundedChannelOptions
+            {
+                SingleReader = true,
+                SingleWriter = false
+            });
+            _channelCompletionSource = new TaskCompletionSource<bool>();
+            _allTasksCompletionSource = null;
+
+            _numberOfUnsettledTasks = 0;
+        }
+
+        public async Task StartAsync()
+        {
+            await foreach (var task in _requestChannel.Reader.ReadAllAsync())
+            {
+                if (task.IsCompleted)
+                {
+                    continue;
+                }
+                
+                Interlocked.Increment(ref _numberOfUnsettledTasks);
+                _ = UntrackOnComplete(task);
+            }
+
+            _channelCompletionSource.TrySetResult(true);
         }
 
         public void Track(Task task)
         {
-            if (Interlocked.Read(ref _allowTrackingFlag) == 1)
-            {
-                return;
-            }
-            
-            _tasks[task] = 0;
-
-            _ = UntrackOnComplete(task);
+            _requestChannel.Writer.TryWrite(task);
         }
 
         private async Task UntrackOnComplete(Task task)
@@ -36,27 +54,28 @@ namespace Oscillation.Core.Utilities
             }
             finally
             {
-                if (Interlocked.Read(ref _allowTrackingFlag) == 0)
+                if (Interlocked.Decrement(ref _numberOfUnsettledTasks) == 0)
                 {
-                    _tasks.TryRemove(task, out _);
+                    if (_channelCompletionSource.Task.IsCompleted)
+                    {
+                        if (Interlocked.Read(ref _numberOfUnsettledTasks) == 0)
+                        {
+                            _allTasksCompletionSource?.TrySetResult(true);
+                        }
+                    }
                 }
             }
         }
 
         public async Task WaitForAllAsync()
         {
-            if (Interlocked.CompareExchange(ref _allowTrackingFlag, 1, 0) == 1)
-            {
-                return;
-            }
+            _allTasksCompletionSource = new TaskCompletionSource<bool>();
+            _requestChannel.Writer.TryComplete();
+            await _channelCompletionSource.Task;
 
-            try
+            if (Interlocked.Read(ref _numberOfUnsettledTasks) > 0)
             {
-                await Task.WhenAll(_tasks.Keys.ToArray());
-            }
-            finally
-            {
-                _tasks.Clear();
+                await _allTasksCompletionSource.Task;
             }
         }
     }
