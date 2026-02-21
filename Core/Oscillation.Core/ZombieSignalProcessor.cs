@@ -57,6 +57,10 @@ namespace Oscillation.Core
                         await session.SaveChangesAsync(cancellationToken);
                     }, cancellationToken);
                 }
+                catch
+                {
+                    // ignored
+                }
                 finally
                 {
                     await Task.Delay(_zombieProcessorOptions.PollInterval, cancellationToken);

@@ -33,6 +33,10 @@ namespace Oscillation.Core
                         await session.CleanDeadSignalsAsync(now, _deadProcessorOptions.BatchSize, cancellationToken);
                     }, cancellationToken);
                 }
+                catch
+                {
+                    // ignored
+                }
                 finally
                 {
                     await Task.Delay(_deadProcessorOptions.PollInterval, cancellationToken);

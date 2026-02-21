@@ -108,6 +108,10 @@ namespace Oscillation.Core
 
                     await FetchNextFireTimeAsync(cancellationToken);
                 }
+                catch
+                {
+                    // ignored
+                }
                 finally
                 {
                     _semaphore.Release();
@@ -118,7 +122,10 @@ namespace Oscillation.Core
                         {
                             await Task.Delay(_distributorOptions.IdleTick, cancellationToken);
                         }
-                        finally { }
+                        catch
+                        {
+                            // ignored
+                        }
                     }
                 }
             }
@@ -141,40 +148,36 @@ namespace Oscillation.Core
         private async Task DistributeSignalAsync(string group, Guid localId, string payload, DistributionPolicy policy)
         {
             var cancellationToken = CancellationToken.None;
+
+            var success = false;
             
             try
             {
                 await _distributionGateway.DistributeAsync(group, localId, payload, cancellationToken);
-
-                await _signalStore.RunSessionAsync(async session =>
-                {
-                    var signal = await session.GetSignalAsync(group, localId, cancellationToken);
-
-                    if (signal == null || signal.State != SignalState.Processing)
-                    {
-                        return;
-                    }
-                    
-                    var now = _timeProvider.UtcDateTimeNow;
-
-                    signal.CompleteProcessing(now, policy.RetentionTimeout);
-
-                    await session.SaveChangesAsync(cancellationToken);
-                }, cancellationToken);
+                success = true;
             }
-            catch (Exception)
+            catch
             {
-                await _signalStore.RunSessionAsync(async session =>
+                // ignore
+            }
+
+            await _signalStore.RunSessionAsync(async session =>
+            {
+                var signal = await session.GetSignalAsync(group, localId, cancellationToken);
+
+                if (signal == null || signal.State != SignalState.Processing)
                 {
-                    var signal = await session.GetSignalAsync(group, localId, cancellationToken);
+                    return;
+                }
+                
+                var now = _timeProvider.UtcDateTimeNow;
 
-                    if (signal == null || signal.State != SignalState.Processing)
-                    {
-                        return;
-                    }
-
-                    var now = _timeProvider.UtcDateTimeNow;
-
+                if (success)
+                {
+                    signal.CompleteProcessing(now, policy.RetentionTimeout);
+                }
+                else
+                {
                     if (signal.RetryAttempts >= policy.MaxRetryAttempts)
                     {
                         signal.FailProcessing(now, policy.RetentionTimeout);
@@ -185,10 +188,10 @@ namespace Oscillation.Core
 
                         signal.FailProcessingAttempt(now, delay);
                     }
-
-                    await session.SaveChangesAsync(cancellationToken);
-                }, cancellationToken);
-            }
+                }
+                
+                await session.SaveChangesAsync(cancellationToken);
+            }, cancellationToken);
         }
 
         public async Task AdjustNextPollTimeAsync(DateTime potentialNextFireTime, CancellationToken cancellationToken)

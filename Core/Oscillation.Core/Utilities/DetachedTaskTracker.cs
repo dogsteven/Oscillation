@@ -53,6 +53,10 @@ namespace Oscillation.Core.Utilities
             {
                 await task;
             }
+            catch
+            {
+                // ignored
+            }   
             finally
             {
                 if (Interlocked.Decrement(ref _numberOfUnsettledTasks) == 0)
