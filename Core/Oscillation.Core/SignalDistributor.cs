@@ -99,7 +99,7 @@ namespace Oscillation.Core
                         var (group, localId, payload, policy) = distributionInfo;
                         
                         var distributeSignalTask = DistributeSignalAsync(group, localId, payload, policy);
-                        _detachedTaskTracker.Track(distributeSignalTask);
+                        _detachedTaskTracker.Track(distributeSignalTask, policy.ProcessingTimeout);
                     }
 
                     var now = _timeProvider.UtcDateTimeNow;

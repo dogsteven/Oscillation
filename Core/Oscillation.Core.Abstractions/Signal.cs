@@ -4,13 +4,13 @@ namespace Oscillation.Core.Abstractions
 {
     public class Signal
     {
-        public readonly string Group;
+        public string Group { get; private set; }
 
-        public readonly Guid LocalId;
+        public Guid LocalId { get; private set; }
 
-        public readonly string Payload;
+        public string Payload { get; private set; }
 
-        public readonly DateTime FireTime;
+        public DateTime FireTime { get; private set; }
 
         public SignalState State { get; private set; }
 

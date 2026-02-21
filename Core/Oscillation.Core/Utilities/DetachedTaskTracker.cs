@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Channels;
 using System.Threading.Tasks;
@@ -41,9 +42,9 @@ namespace Oscillation.Core.Utilities
             _channelCompletionSource.TrySetResult(true);
         }
 
-        public void Track(Task task)
+        public void Track(Task task, TimeSpan timeout)
         {
-            _requestChannel.Writer.TryWrite(task);
+            _requestChannel.Writer.TryWrite(Task.WhenAny(task, Task.Delay(timeout)));
         }
 
         private async Task UntrackOnComplete(Task task)
