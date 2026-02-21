@@ -60,7 +60,8 @@ public class SignalEntityConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(signal => signal.State)
             .HasColumnName("State")
             .IsRequired()
-            .HasConversion<string>();
+            .HasConversion<string>()
+            .IsConcurrencyToken(true);
 
         builder.Property(signal => signal.NextFireTime)
             .HasColumnName("NextFireTime")

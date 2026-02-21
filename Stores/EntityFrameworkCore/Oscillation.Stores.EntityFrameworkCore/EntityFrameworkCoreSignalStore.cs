@@ -1,3 +1,4 @@
+using System.Data;
 using Microsoft.EntityFrameworkCore;
 using Oscillation.Core.Abstractions;
 using Oscillation.Stores.EntityFrameworkCore.Abstractions;
@@ -26,7 +27,9 @@ public class EntityFrameworkCoreSignalStore : ISignalStore
         {
             await using var context = _dbContextFactory.Create();
             
-            await using var transaction = await context.Database.BeginTransactionAsync(ct);
+            var isolationLevel = _selectTemplateProvider == null ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted;
+            
+            await using var transaction = await context.Database.BeginTransactionAsync(isolationLevel, ct);
 
             try
             {
@@ -54,7 +57,9 @@ public class EntityFrameworkCoreSignalStore : ISignalStore
         {
             await using var dbContext = _dbContextFactory.Create();
             
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(ct);
+            var isolationLevel = _selectTemplateProvider == null ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted;
+            
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(isolationLevel, ct);
 
             try
             {
