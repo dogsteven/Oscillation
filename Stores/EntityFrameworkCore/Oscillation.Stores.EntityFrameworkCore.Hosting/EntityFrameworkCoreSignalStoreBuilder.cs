@@ -1,8 +1,8 @@
+using System.Data;
 using Microsoft.Extensions.DependencyInjection;
 using Oscillation.Hosting.Client;
 using Oscillation.Hosting.Server;
 using Oscillation.Stores.EntityFrameworkCore.Abstractions;
-using Oscillation.Stores.EntityFrameworkCore.Hosting.Standalone;
 
 namespace Oscillation.Stores.EntityFrameworkCore.Hosting;
 
@@ -10,11 +10,13 @@ public class EntityFrameworkCoreSignalStoreBuilder
 {
     private Func<IServiceProvider, ISignalStoreDbContextFactory> _dbContextFactoryFactory;
     private Func<IServiceProvider, ISignalSelectTemplateProvider?> _selectTemplateProviderFactory;
+    private IsolationLevel? _isolationLevel;
 
     public EntityFrameworkCoreSignalStoreBuilder()
     {
         _dbContextFactoryFactory = provider => provider.GetRequiredService<ISignalStoreDbContextFactory>();
         _selectTemplateProviderFactory = provider => provider.GetRequiredService<ISignalSelectTemplateProvider>();
+        _isolationLevel = null;
     }
 
     public EntityFrameworkCoreSignalStoreBuilder UseDbContextFactory(Func<IServiceProvider, ISignalStoreDbContextFactory> dbContextFactoryFactory)
@@ -29,12 +31,18 @@ public class EntityFrameworkCoreSignalStoreBuilder
         return this;
     }
 
+    public EntityFrameworkCoreSignalStoreBuilder UseIsolationLevel(IsolationLevel isolationLevel)
+    {
+        _isolationLevel = isolationLevel;
+        return this;
+    }
+
     public EntityFrameworkCoreSignalStore Build(IServiceProvider provider)
     {
         var dbContextFactory = _dbContextFactoryFactory(provider);
         var selectTemplateProvider = _selectTemplateProviderFactory(provider);
         
-        return new EntityFrameworkCoreSignalStore(dbContextFactory, selectTemplateProvider);
+        return new EntityFrameworkCoreSignalStore(dbContextFactory, selectTemplateProvider, _isolationLevel);
     }
 }
 

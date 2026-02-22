@@ -9,12 +9,23 @@ public class EntityFrameworkCoreSignalStore : ISignalStore
 {
     private readonly ISignalStoreDbContextFactory _dbContextFactory;
     private readonly ISignalSelectTemplateProvider? _selectTemplateProvider;
+    private readonly IsolationLevel _isolationLevel;
 
     public EntityFrameworkCoreSignalStore(ISignalStoreDbContextFactory dbContextFactory,
-        ISignalSelectTemplateProvider? selectTemplateProvider)
+        ISignalSelectTemplateProvider? selectTemplateProvider,
+        IsolationLevel? isolationLevel)
     {
         _dbContextFactory = dbContextFactory;
         _selectTemplateProvider = selectTemplateProvider;
+
+        if (_selectTemplateProvider != null)
+        {
+            _isolationLevel = IsolationLevel.ReadCommitted;
+        }
+        else
+        {
+            _isolationLevel = isolationLevel ?? IsolationLevel.Serializable;
+        }
     }
 
     public async Task RunSessionAsync(Func<ISignalStoreSession, Task> operation, CancellationToken cancellationToken)
@@ -27,9 +38,7 @@ public class EntityFrameworkCoreSignalStore : ISignalStore
         {
             await using var context = _dbContextFactory.Create();
             
-            var isolationLevel = _selectTemplateProvider == null ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted;
-            
-            await using var transaction = await context.Database.BeginTransactionAsync(isolationLevel, ct);
+            await using var transaction = await context.Database.BeginTransactionAsync(_isolationLevel, ct);
 
             try
             {
@@ -57,9 +66,7 @@ public class EntityFrameworkCoreSignalStore : ISignalStore
         {
             await using var dbContext = _dbContextFactory.Create();
             
-            var isolationLevel = _selectTemplateProvider == null ? IsolationLevel.RepeatableRead : IsolationLevel.ReadCommitted;
-            
-            await using var transaction = await dbContext.Database.BeginTransactionAsync(isolationLevel, ct);
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(_isolationLevel, ct);
 
             try
             {
