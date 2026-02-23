@@ -15,7 +15,7 @@ public class EntityFrameworkCoreSignalStoreBuilder
     public EntityFrameworkCoreSignalStoreBuilder()
     {
         _dbContextFactoryFactory = provider => provider.GetRequiredService<ISignalStoreDbContextFactory>();
-        _selectTemplateProviderFactory = provider => provider.GetRequiredService<ISignalSelectTemplateProvider>();
+        _selectTemplateProviderFactory = provider => null;
         _isolationLevel = null;
     }
 
