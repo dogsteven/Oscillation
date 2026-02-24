@@ -1,4 +1,6 @@
 using System.Data;
+using System.Linq.Expressions;
+using LinqKit;
 using Microsoft.EntityFrameworkCore;
 using Oscillation.Core.Abstractions;
 using Oscillation.Stores.EntityFrameworkCore.Abstractions;
@@ -109,6 +111,44 @@ public class EntityFrameworkCoreSignalStoreSession : ISignalStoreSession
         }
         
         return await _dbContext.Signals.FindAsync([group, localId], cancellationToken);
+    }
+
+    public async Task<List<Signal>> GetSignalsAsync(List<(string Group, Guid LocalId)> identifiers, CancellationToken cancellationToken)
+    {
+        if (identifiers.Count == 0)
+        {
+            return [];
+        }
+
+        if (_selectTemplateProvider != null)
+        {
+            var parameters = new object[identifiers.Count * 2];
+
+            for (var i = 0; i < identifiers.Count; ++i)
+            {
+                var (group, localId) = identifiers[i];
+                parameters[i * 2] = group;
+                parameters[i * 2 + 1] = localId;
+            }
+
+            return await _dbContext.Signals
+                .FromSqlRaw(_selectTemplateProvider.ProvideSelectSignalsTemplate(identifiers.Count), parameters)
+                .ToListAsync(cancellationToken);
+        }
+
+        var predicate = PredicateBuilder.New<Signal>(false);
+
+        foreach (var identifier in identifiers)
+        {
+            var (group, localId) = identifier;
+            
+            predicate = predicate.Or(signal => signal.Group == group && signal.LocalId == localId);
+        }
+
+        return await _dbContext.Signals
+            .AsExpandable()
+            .Where(predicate)
+            .ToListAsync(cancellationToken);
     }
 
     public async Task<DateTime?> GetNextFireTimeAsync(CancellationToken cancellationToken)

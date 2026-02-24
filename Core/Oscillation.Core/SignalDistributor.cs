@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Oscillation.Core.Abstractions;
@@ -94,12 +95,21 @@ namespace Oscillation.Core
                         await session.SaveChangesAsync(cancellationToken);
                     }, cancellationToken);
 
-                    foreach (var distributionInfo in distributionInfos)
+                    if (distributionInfos.Any())
                     {
-                        var (group, localId, payload, policy) = distributionInfo;
-                        
-                        var distributeSignalTask = DistributeSignalAsync(group, localId, payload, policy);
-                        _detachedTaskTracker.Track(distributeSignalTask, policy.ProcessingTimeout);
+                        if (_distributorOptions.UseBatchCommit)
+                        {
+                            _detachedTaskTracker.Track(DistributeSignalsAsync(distributionInfos), distributionInfos.Max(distributionInfo => distributionInfo.Policy.ProcessingTimeout));
+                        }
+                        else
+                        {
+                            foreach (var distributionInfo in distributionInfos)
+                            {
+                                var (group, localId, payload, policy) = distributionInfo;
+
+                                _detachedTaskTracker.Track(DistributeSignalAsync(group, localId, payload, policy), policy.ProcessingTimeout);
+                            }
+                        }
                     }
 
                     var now = _timeProvider.UtcDateTimeNow;
@@ -142,6 +152,76 @@ namespace Oscillation.Core
             if (nextFireTime.HasValue)
             {
                 AdjustNextPollTime(nextFireTime.Value);
+            }
+        }
+
+        private async Task DistributeSignalsAsync(List<(string Group, Guid LocalId, string Payload, DistributionPolicy Policy)> distributionInfos)
+        {
+            var successes = await Task.WhenAll(distributionInfos.Select(TryDistributeSignalAsync));
+
+            var resultMap = new Dictionary<(string Group, Guid LocalId), (bool success, DistributionPolicy Policy)>();
+
+            for (var i = 0; i < distributionInfos.Count; ++i)
+            {
+                var (group, localId, _, policy) = distributionInfos[i];
+                var success = successes[i];
+
+                resultMap[(group, localId)] = (success, policy);
+            }
+
+            await _signalStore.RunSessionAsync(async session =>
+            {
+                var signals = await session.GetSignalsAsync(distributionInfos.Select(distributionInfo => (distributionInfo.Group, distributionInfo.LocalId)).ToList(), CancellationToken.None);
+
+                foreach (var signal in signals)
+                {
+                    if (signal.State != SignalState.Processing)
+                    {
+                        continue;
+                    }
+
+                    if (resultMap.TryGetValue((signal.Group, signal.LocalId), out var result))
+                    {
+                        var (success, policy) = result;
+
+                        var now = _timeProvider.UtcDateTimeNow;
+
+                        if (success)
+                        {
+                            signal.CompleteProcessing(now, policy.RetentionTimeout);
+                        }
+                        else
+                        {
+                            if (signal.RetryAttempts >= policy.MaxRetryAttempts)
+                            {
+                                signal.FailProcessing(now, policy.RetentionTimeout);
+                            }
+                            else
+                            {
+                                var delay = policy.RetryPatterns[signal.RetryAttempts];
+
+                                signal.FailProcessingAttempt(now, delay);
+                            }
+                        }
+                    }
+                }
+
+                await session.SaveChangesAsync(CancellationToken.None);
+            }, CancellationToken.None);
+        }
+
+        private async Task<bool> TryDistributeSignalAsync((string Group, Guid LocalId, string Payload, DistributionPolicy Policy) distributionInfo)
+        {
+            var (group, localId, payload, _) = distributionInfo;
+
+            try
+            {
+                await _distributionGateway.DistributeAsync(group, localId, payload, CancellationToken.None);
+                return true;
+            }
+            catch
+            {
+                return false;
             }
         }
 
@@ -254,5 +334,7 @@ namespace Oscillation.Core
         public TimeSpan MinPollInterval { get; set; }
         
         public TimeSpan MaxPollInterval { get; set; }
+
+        public bool UseBatchCommit { get; set; }
     }
 }

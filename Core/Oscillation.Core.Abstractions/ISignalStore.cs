@@ -14,6 +14,7 @@ namespace Oscillation.Core.Abstractions
     public interface ISignalStoreSession
     {
         public Task<Signal?> GetSignalAsync(string group, Guid localId, CancellationToken cancellationToken);
+        public Task<List<Signal>> GetSignalsAsync(List<(string Group, Guid LocalId)> identifiers, CancellationToken cancellationToken);
         public Task<DateTime?> GetNextFireTimeAsync(CancellationToken cancellationToken);
         public Task<List<Signal>> GetReadySignalsAsync(DateTime now, int maxCount, CancellationToken cancellationToken);
         public Task<List<Signal>> GetZombieSignalsAsync(DateTime now, int maxCount, CancellationToken cancellationToken);

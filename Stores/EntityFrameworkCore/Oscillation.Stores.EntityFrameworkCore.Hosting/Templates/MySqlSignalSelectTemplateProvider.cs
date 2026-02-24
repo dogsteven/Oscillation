@@ -22,6 +22,21 @@ public class MySqlSignalSelectTemplateProvider : ISignalSelectTemplateProvider
                  """;
     }
 
+    public string ProvideSelectSignalsTemplate(int count)
+    {
+        var placeholders = Enumerable.Range(0, count)
+            .Select(i => $"({{{i * 2}}}, {{{i * 2 + 1}}})")
+            .ToList();
+
+        var inClause = string.Join(", ", placeholders);
+
+        return $$"""
+                    SELECT * FROM {{_tableName}} 
+                    WHERE (`Group`, `LocalId`) IN ({{inClause}})
+                    FOR UPDATE
+                 """;
+    }
+
     public string ProvideSelectReadySignalsTemplate()
     {
         return $$"""

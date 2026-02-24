@@ -12,6 +12,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <PackageReference Include="LinqKit.Microsoft.EntityFrameworkCore" Version="8.1.11" />
       <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.24" />
     </ItemGroup>
 

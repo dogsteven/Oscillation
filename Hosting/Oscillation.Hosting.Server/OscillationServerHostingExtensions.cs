@@ -148,7 +148,8 @@ namespace Oscillation.Hosting.Server
                     IdleTick = TimeSpan.FromMilliseconds(100),
                     BatchSize = 50,
                     MinPollInterval = TimeSpan.FromSeconds(1),
-                    MaxPollInterval = TimeSpan.FromSeconds(60)
+                    MaxPollInterval = TimeSpan.FromSeconds(60),
+                    UseBatchCommit = true
                 };
 
                 var zombieSignalProcessorOptions = new ZombieSignalProcessorOptions
