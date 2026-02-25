@@ -23,6 +23,8 @@ namespace Oscillation.Core.Abstractions
         public DateTime? FinalizedTime { get; private set; }
 
         public DateTime? DeadTime { get; private set; }
+        
+        public int Version { get; private set; }
 
     #pragma warning disable CS8618
         public Signal() { }
@@ -39,6 +41,7 @@ namespace Oscillation.Core.Abstractions
             ProcessingTimeout = null;
             RetryAttempts = 0;
             FinalizedTime = null;
+            Version = 0;
         }
 
         public void AttemptProcessing(DateTime now, TimeSpan processingTimeout)
@@ -50,6 +53,7 @@ namespace Oscillation.Core.Abstractions
 
             State = SignalState.Processing;
             ProcessingTimeout = now.Add(processingTimeout);
+            Version++;
         }
 
         public void FailProcessingAttempt(DateTime now, TimeSpan delay)
@@ -63,6 +67,7 @@ namespace Oscillation.Core.Abstractions
             ProcessingTimeout = null;
             NextFireTime = now.Add(delay);
             RetryAttempts++;
+            Version++;
         }
 
         public void CompleteProcessing(DateTime now, TimeSpan retentionTimeout)
@@ -76,6 +81,7 @@ namespace Oscillation.Core.Abstractions
             ProcessingTimeout = null;
             FinalizedTime = now;
             DeadTime = now.Add(retentionTimeout);
+            Version++;
         }
 
         public void FailProcessing(DateTime now, TimeSpan retentionTimeout)
@@ -89,6 +95,7 @@ namespace Oscillation.Core.Abstractions
             ProcessingTimeout = null;
             FinalizedTime = now;
             DeadTime = now.Add(retentionTimeout);
+            Version++;
         }
     }
 

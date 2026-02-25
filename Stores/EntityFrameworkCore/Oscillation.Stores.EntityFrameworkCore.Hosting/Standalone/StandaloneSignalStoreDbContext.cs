@@ -60,8 +60,7 @@ public class SignalEntityConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(signal => signal.State)
             .HasColumnName("State")
             .IsRequired()
-            .HasConversion<string>()
-            .IsConcurrencyToken(true);
+            .HasConversion<string>();
 
         builder.Property(signal => signal.NextFireTime)
             .HasColumnName("NextFireTime")
@@ -82,6 +81,11 @@ public class SignalEntityConfiguration : IEntityTypeConfiguration<Signal>
         builder.Property(signal => signal.DeadTime)
             .HasColumnName("DeadTime")
             .IsRequired(false);
+        
+        builder.Property(signal => signal.Version)
+            .HasColumnName("Version")
+            .IsRequired()
+            .IsConcurrencyToken(true);
         
         builder.HasIndex(signal => new { DistributingStatus = signal.State, signal.NextFireTime });
 
