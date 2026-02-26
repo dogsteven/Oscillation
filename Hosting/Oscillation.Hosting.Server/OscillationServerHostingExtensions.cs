@@ -1,9 +1,12 @@
 using System;
+using System.Collections.Generic;
 using Microsoft.Extensions.DependencyInjection;
 using Oscillation.Core;
 using Oscillation.Core.Abstractions;
+using Oscillation.Core.Observability;
 using Oscillation.Core.Policies;
 using Oscillation.Hosting.Server.Abstractions;
+using Oscillation.Hosting.Server.Observability;
 
 namespace Oscillation.Hosting.Server
 {
@@ -13,7 +16,7 @@ namespace Oscillation.Hosting.Server
         {
             var configurator = new OscillationServerServiceConfigurator();
             configure(configurator);
-            
+
             configurator.Populate(services);
             return services;
         }
@@ -23,7 +26,7 @@ namespace Oscillation.Hosting.Server
         {
             return configurator.UseSignalStore(provider => provider.GetRequiredService<TSignalStore>());
         }
-        
+
         public static OscillationServerServiceConfigurator UseDistributionGateway<TDistributionGateway>(this OscillationServerServiceConfigurator configurator)
             where TDistributionGateway : class, IDistributionGateway
         {
@@ -47,6 +50,24 @@ namespace Oscillation.Hosting.Server
         {
             return configurator.UseSignalNotificationSubscriber(provider => provider.GetRequiredService<TSignalNotificationSubscriber>());
         }
+
+        public static OscillationServerServiceConfigurator AddSignalDistributorObserver<TObserver>(this OscillationServerServiceConfigurator configurator)
+            where TObserver : class, ISignalDistributorObserver
+        {
+            return configurator.AddSignalDistributorObserver(provider => provider.GetRequiredService<TObserver>());
+        }
+
+        public static OscillationServerServiceConfigurator AddZombieSignalProcessorObserver<TObserver>(this OscillationServerServiceConfigurator configurator)
+            where TObserver : class, IZombieSignalProcessorObserver
+        {
+            return configurator.AddZombieSignalProcessorObserver(provider => provider.GetRequiredService<TObserver>());
+        }
+
+        public static OscillationServerServiceConfigurator AddDeadSignalProcessorObserver<TObserver>(this OscillationServerServiceConfigurator configurator)
+            where TObserver : class, IDeadSignalProcessorObserver
+        {
+            return configurator.AddDeadSignalProcessorObserver(provider => provider.GetRequiredService<TObserver>());
+        }
     }
 
     public class OscillationServerServiceConfigurator
@@ -63,6 +84,10 @@ namespace Oscillation.Hosting.Server
         private Action<IServiceProvider, ZombieSignalProcessorOptions> _zombieSignalProcessorOptionsConfigure;
         private Action<IServiceProvider, DeadSignalProcessorOptions> _deadSignalProcessorOptionsConfigure;
 
+        private readonly List<Func<IServiceProvider, ISignalDistributorObserver>> _signalDistributorObserverFactories;
+        private readonly List<Func<IServiceProvider, IZombieSignalProcessorObserver>> _zombieSignalProcessorObserverFactories;
+        private readonly List<Func<IServiceProvider, IDeadSignalProcessorObserver>> _deadSignalProcessorObserverFactories;
+
         public OscillationServerServiceConfigurator()
         {
             _signalStoreFactory = provider => provider.GetRequiredService<ISignalStore>();
@@ -76,6 +101,10 @@ namespace Oscillation.Hosting.Server
             _signalDistributorOptionsConfigure = (provider, options) => { };
             _zombieSignalProcessorOptionsConfigure = (provider, options) => { };
             _deadSignalProcessorOptionsConfigure = (provider, options) => { };
+
+            _signalDistributorObserverFactories = new List<Func<IServiceProvider, ISignalDistributorObserver>>();
+            _zombieSignalProcessorObserverFactories = new List<Func<IServiceProvider, IZombieSignalProcessorObserver>>();
+            _deadSignalProcessorObserverFactories = new List<Func<IServiceProvider, IDeadSignalProcessorObserver>>();
         }
 
         public OscillationServerServiceConfigurator UseSignalStore(Func<IServiceProvider, ISignalStore> signalStoreFactory)
@@ -83,7 +112,7 @@ namespace Oscillation.Hosting.Server
             _signalStoreFactory = signalStoreFactory;
             return this;
         }
-        
+
         public OscillationServerServiceConfigurator UseDistributionGateway(Func<IServiceProvider, IDistributionGateway> distributionGatewayFactory)
         {
             _distributionGatewayFactory = distributionGatewayFactory;
@@ -119,7 +148,7 @@ namespace Oscillation.Hosting.Server
             _signalDistributorOptionsConfigure = signalDistributorOptionsConfigure;
             return this;
         }
-        
+
         public OscillationServerServiceConfigurator ConfigureZombieSignalProcessorOptions(Action<IServiceProvider, ZombieSignalProcessorOptions> zombieSignalProcessorOptionsConfigure)
         {
             _zombieSignalProcessorOptionsConfigure = zombieSignalProcessorOptionsConfigure;
@@ -129,6 +158,24 @@ namespace Oscillation.Hosting.Server
         public OscillationServerServiceConfigurator ConfigureDeadSignalProcessorOptions(Action<IServiceProvider, DeadSignalProcessorOptions> deadSignalProcessorOptionsConfigure)
         {
             _deadSignalProcessorOptionsConfigure = deadSignalProcessorOptionsConfigure;
+            return this;
+        }
+
+        public OscillationServerServiceConfigurator AddSignalDistributorObserver(Func<IServiceProvider, ISignalDistributorObserver> observerFactory)
+        {
+            _signalDistributorObserverFactories.Add(observerFactory);
+            return this;
+        }
+
+        public OscillationServerServiceConfigurator AddZombieSignalProcessorObserver(Func<IServiceProvider, IZombieSignalProcessorObserver> observerFactory)
+        {
+            _zombieSignalProcessorObserverFactories.Add(observerFactory);
+            return this;
+        }
+
+        public OscillationServerServiceConfigurator AddDeadSignalProcessorObserver(Func<IServiceProvider, IDeadSignalProcessorObserver> observerFactory)
+        {
+            _deadSignalProcessorObserverFactories.Add(observerFactory);
             return this;
         }
 
@@ -163,11 +210,32 @@ namespace Oscillation.Hosting.Server
                     BatchSize = 100,
                     PollInterval = TimeSpan.FromSeconds(300)
                 };
-                
+
                 _signalDistributorOptionsConfigure(provider, signalDistributorOptions);
                 _zombieSignalProcessorOptionsConfigure(provider, zombieSignalProcessorOptions);
                 _deadSignalProcessorOptionsConfigure(provider, deadSignalProcessorOptions);
-                
+
+                ISignalDistributorObserver? signalDistributorObserver = _signalDistributorObserverFactories.Count switch
+                {
+                    0 => null,
+                    1 => _signalDistributorObserverFactories[0](provider),
+                    _ => new CompositeSignalDistributorObserver(_signalDistributorObserverFactories.ConvertAll(f => f(provider)))
+                };
+
+                IZombieSignalProcessorObserver? zombieSignalProcessorObserver = _zombieSignalProcessorObserverFactories.Count switch
+                {
+                    0 => null,
+                    1 => _zombieSignalProcessorObserverFactories[0](provider),
+                    _ => new CompositeZombieSignalProcessorObserver(_zombieSignalProcessorObserverFactories.ConvertAll(f => f(provider)))
+                };
+
+                IDeadSignalProcessorObserver? deadSignalProcessorObserver = _deadSignalProcessorObserverFactories.Count switch
+                {
+                    0 => null,
+                    1 => _deadSignalProcessorObserverFactories[0](provider),
+                    _ => new CompositeDeadSignalProcessorObserver(_deadSignalProcessorObserverFactories.ConvertAll(f => f(provider)))
+                };
+
                 return new SignalProcessingBackgroundService(
                     numberOfDistributors,
                     signalStore,
@@ -177,7 +245,10 @@ namespace Oscillation.Hosting.Server
                     signalNotificationSubscriber,
                     signalDistributorOptions,
                     zombieSignalProcessorOptions,
-                    deadSignalProcessorOptions);
+                    deadSignalProcessorOptions,
+                    signalDistributorObserver,
+                    zombieSignalProcessorObserver,
+                    deadSignalProcessorObserver);
             });
         }
     }

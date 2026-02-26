@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Oscillation.Core.Abstractions;
+using Oscillation.Core.Observability;
 
 namespace Oscillation.Core
 {
@@ -9,17 +10,20 @@ namespace Oscillation.Core
     {
         private readonly ISignalStore _signalStore;
         private readonly DeadSignalProcessorOptions _deadProcessorOptions;
-        
+
         private readonly ITimeProvider _timeProvider;
 
+        private readonly IDeadSignalProcessorObserver? _observer;
+
         public DeadSignalProcessor(ISignalStore signalStore, DeadSignalProcessorOptions deadProcessorOptions,
-            ITimeProvider timeProvider)
+            ITimeProvider timeProvider, IDeadSignalProcessorObserver? observer = null)
         {
             _signalStore = signalStore;
             _deadProcessorOptions = deadProcessorOptions;
             _timeProvider = timeProvider;
+            _observer = observer;
         }
-        
+
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -33,6 +37,10 @@ namespace Oscillation.Core
                         await session.CleanDeadSignalsAsync(now, _deadProcessorOptions.BatchSize, cancellationToken);
                     }, cancellationToken);
                 }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    _observer?.OnCycleError(ex);
+                }
                 catch
                 {
                     // ignored
@@ -44,11 +52,11 @@ namespace Oscillation.Core
             }
         }
     }
-    
+
     public class DeadSignalProcessorOptions
     {
         public int BatchSize { get; set; }
-        
+
         public TimeSpan PollInterval { get; set; }
     }
 }

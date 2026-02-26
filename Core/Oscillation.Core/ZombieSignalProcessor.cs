@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Oscillation.Core.Abstractions;
+using Oscillation.Core.Observability;
 using Oscillation.Core.Policies;
 
 namespace Oscillation.Core
@@ -10,20 +11,24 @@ namespace Oscillation.Core
     {
         private readonly ISignalStore _signalStore;
         private readonly IDistributionPolicyProvider _distributionPolicyProvider;
-        
+
         private readonly ZombieSignalProcessorOptions _zombieProcessorOptions;
-        
+
         private readonly ITimeProvider _timeProvider;
 
-        public ZombieSignalProcessor(ISignalStore signalStore, IDistributionPolicyProvider distributionPolicyProvider, 
-            ZombieSignalProcessorOptions zombieProcessorOptions, ITimeProvider timeProvider)
+        private readonly IZombieSignalProcessorObserver? _observer;
+
+        public ZombieSignalProcessor(ISignalStore signalStore, IDistributionPolicyProvider distributionPolicyProvider,
+            ZombieSignalProcessorOptions zombieProcessorOptions, ITimeProvider timeProvider,
+            IZombieSignalProcessorObserver? observer = null)
         {
             _signalStore = signalStore;
             _distributionPolicyProvider = distributionPolicyProvider;
             _zombieProcessorOptions = zombieProcessorOptions;
             _timeProvider = timeProvider;
+            _observer = observer;
         }
-        
+
         public async Task StartAsync(CancellationToken cancellationToken)
         {
             while (!cancellationToken.IsCancellationRequested)
@@ -45,17 +50,23 @@ namespace Oscillation.Core
                             if (signal.RetryAttempts >= policy.MaxRetryAttempts)
                             {
                                 signal.FailProcessing(now, policy.RetentionTimeout);
+                                _observer?.OnZombieSignalTerminated(signal.Group, signal.LocalId);
                             }
                             else
                             {
                                 var delay = policy.RetryPatterns[signal.RetryAttempts];
 
                                 signal.FailProcessingAttempt(now, delay);
+                                _observer?.OnZombieSignalRecovered(signal.Group, signal.LocalId);
                             }
                         }
 
                         await session.SaveChangesAsync(cancellationToken);
                     }, cancellationToken);
+                }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    _observer?.OnCycleError(ex);
                 }
                 catch
                 {
@@ -68,11 +79,11 @@ namespace Oscillation.Core
             }
         }
     }
-    
+
     public class ZombieSignalProcessorOptions
     {
         public int BatchSize { get; set; }
-        
+
         public TimeSpan PollInterval { get; set; }
     }
 }

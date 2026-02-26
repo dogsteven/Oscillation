@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Oscillation.Core.Abstractions;
+using Oscillation.Core.Observability;
 using Oscillation.Core.Policies;
 using Oscillation.Core.Utilities;
 
@@ -14,13 +15,15 @@ namespace Oscillation.Core
         private readonly ISignalStore _signalStore;
         private readonly IDistributionGateway _distributionGateway;
         private readonly IDistributionPolicyProvider _distributionPolicyProvider;
-        
+
         private readonly SignalDistributorOptions _distributorOptions;
 
         private readonly ITimeProvider _timeProvider;
         private readonly SemaphoreSlim _semaphore;
 
         private readonly DetachedTaskTracker _detachedTaskTracker;
+
+        private readonly ISignalDistributorObserver? _observer;
 
         private long _runningFlag;
 
@@ -31,7 +34,7 @@ namespace Oscillation.Core
 
         public SignalDistributor(ISignalStore signalStore, IDistributionGateway distributionGateway,
             IDistributionPolicyProvider distributionPolicyProvider, SignalDistributorOptions distributorOptions,
-            ITimeProvider timeProvider)
+            ITimeProvider timeProvider, ISignalDistributorObserver? observer = null)
         {
             _signalStore = signalStore;
             _distributionGateway = distributionGateway;
@@ -43,6 +46,7 @@ namespace Oscillation.Core
             _runningFlag = 0;
             _nextPoll = DateTime.MaxValue;
             _minNextPoll = DateTime.MaxValue;
+            _observer = observer;
         }
 
         public async Task StartAsync(CancellationToken cancellationToken)
@@ -62,11 +66,11 @@ namespace Oscillation.Core
             while (!cancellationToken.IsCancellationRequested)
             {
                 var noPoll = false;
-                
+
                 try
                 {
                     await _semaphore.WaitAsync(cancellationToken);
-                    
+
                     if (_timeProvider.UtcDateTimeNow < _nextPoll)
                     {
                         noPoll = true;
@@ -95,6 +99,8 @@ namespace Oscillation.Core
                         await session.SaveChangesAsync(cancellationToken);
                     }, cancellationToken);
 
+                    _observer?.OnPollCycleCompleted(distributionInfos.Select(d => (d.Group, d.LocalId)).ToList());
+
                     if (distributionInfos.Any())
                     {
                         if (_distributorOptions.UseBatchCommit)
@@ -118,6 +124,10 @@ namespace Oscillation.Core
 
                     await FetchNextFireTimeAsync(cancellationToken);
                 }
+                catch (Exception ex) when (!(ex is OperationCanceledException))
+                {
+                    _observer?.OnDistributionError(ex);
+                }
                 catch
                 {
                     // ignored
@@ -125,7 +135,7 @@ namespace Oscillation.Core
                 finally
                 {
                     _semaphore.Release();
-                    
+
                     if (noPoll)
                     {
                         try
@@ -139,7 +149,7 @@ namespace Oscillation.Core
                     }
                 }
             }
-            
+
             await _detachedTaskTracker.WaitForAllAsync();
 
             _runningFlag = 0;
@@ -157,16 +167,15 @@ namespace Oscillation.Core
 
         private async Task DistributeSignalsAsync(List<(string Group, Guid LocalId, string Payload, DistributionPolicy Policy)> distributionInfos)
         {
-            var successes = await Task.WhenAll(distributionInfos.Select(TryDistributeSignalAsync));
+            var results = await Task.WhenAll(distributionInfos.Select(TryDistributeSignalAsync));
 
-            var resultMap = new Dictionary<(string Group, Guid LocalId), (bool success, DistributionPolicy Policy)>();
+            var resultMap = new Dictionary<(string Group, Guid LocalId), (Exception? Cause, DistributionPolicy Policy)>();
 
             for (var i = 0; i < distributionInfos.Count; ++i)
             {
                 var (group, localId, _, policy) = distributionInfos[i];
-                var success = successes[i];
 
-                resultMap[(group, localId)] = (success, policy);
+                resultMap[(group, localId)] = (results[i], policy);
             }
 
             await _signalStore.RunSessionAsync(async session =>
@@ -182,25 +191,26 @@ namespace Oscillation.Core
 
                     if (resultMap.TryGetValue((signal.Group, signal.LocalId), out var result))
                     {
-                        var (success, policy) = result;
-
                         var now = _timeProvider.UtcDateTimeNow;
 
-                        if (success)
+                        if (result.Cause == null)
                         {
-                            signal.CompleteProcessing(now, policy.RetentionTimeout);
+                            signal.CompleteProcessing(now, result.Policy.RetentionTimeout);
+                            _observer?.OnSignalSucceeded(signal.Group, signal.LocalId);
                         }
                         else
                         {
-                            if (signal.RetryAttempts >= policy.MaxRetryAttempts)
+                            if (signal.RetryAttempts >= result.Policy.MaxRetryAttempts)
                             {
-                                signal.FailProcessing(now, policy.RetentionTimeout);
+                                signal.FailProcessing(now, result.Policy.RetentionTimeout);
+                                _observer?.OnSignalFailed(signal.Group, signal.LocalId);
                             }
                             else
                             {
-                                var delay = policy.RetryPatterns[signal.RetryAttempts];
+                                var delay = result.Policy.RetryPatterns[signal.RetryAttempts];
 
                                 signal.FailProcessingAttempt(now, delay);
+                                _observer?.OnSignalRetried(signal.Group, signal.LocalId, signal.RetryAttempts, result.Cause);
                             }
                         }
                     }
@@ -210,18 +220,18 @@ namespace Oscillation.Core
             }, CancellationToken.None);
         }
 
-        private async Task<bool> TryDistributeSignalAsync((string Group, Guid LocalId, string Payload, DistributionPolicy Policy) distributionInfo)
+        private async Task<Exception?> TryDistributeSignalAsync((string Group, Guid LocalId, string Payload, DistributionPolicy Policy) distributionInfo)
         {
             var (group, localId, payload, _) = distributionInfo;
 
             try
             {
                 await _distributionGateway.DistributeAsync(group, localId, payload, CancellationToken.None);
-                return true;
+                return null;
             }
-            catch
+            catch (Exception ex)
             {
-                return false;
+                return ex;
             }
         }
 
@@ -230,15 +240,16 @@ namespace Oscillation.Core
             var cancellationToken = CancellationToken.None;
 
             var success = false;
-            
+            Exception? distributionError = null;
+
             try
             {
                 await _distributionGateway.DistributeAsync(group, localId, payload, cancellationToken);
                 success = true;
             }
-            catch
+            catch (Exception ex)
             {
-                // ignore
+                distributionError = ex;
             }
 
             await _signalStore.RunSessionAsync(async session =>
@@ -249,27 +260,30 @@ namespace Oscillation.Core
                 {
                     return;
                 }
-                
+
                 var now = _timeProvider.UtcDateTimeNow;
 
                 if (success)
                 {
                     signal.CompleteProcessing(now, policy.RetentionTimeout);
+                    _observer?.OnSignalSucceeded(group, localId);
                 }
                 else
                 {
                     if (signal.RetryAttempts >= policy.MaxRetryAttempts)
                     {
                         signal.FailProcessing(now, policy.RetentionTimeout);
+                        _observer?.OnSignalFailed(group, localId);
                     }
                     else
                     {
                         var delay = policy.RetryPatterns[signal.RetryAttempts];
 
                         signal.FailProcessingAttempt(now, delay);
+                        _observer?.OnSignalRetried(group, localId, signal.RetryAttempts, distributionError!);
                     }
                 }
-                
+
                 await session.SaveChangesAsync(cancellationToken);
             }, cancellationToken);
         }
@@ -324,15 +338,15 @@ namespace Oscillation.Core
             Dispose(false);
         }
     }
-    
+
     public class SignalDistributorOptions
     {
         public TimeSpan IdleTick { get; set; }
-        
+
         public int BatchSize { get; set; }
-        
+
         public TimeSpan MinPollInterval { get; set; }
-        
+
         public TimeSpan MaxPollInterval { get; set; }
 
         public bool UseBatchCommit { get; set; }

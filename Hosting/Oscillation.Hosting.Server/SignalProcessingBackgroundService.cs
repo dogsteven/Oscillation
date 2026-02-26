@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Oscillation.Core;
 using Oscillation.Core.Abstractions;
+using Oscillation.Core.Observability;
 using Oscillation.Core.Policies;
 using Oscillation.Hosting.Server.Abstractions;
 
@@ -27,7 +28,10 @@ namespace Oscillation.Hosting.Server
             ISignalNotificationSubscriber signalNotificationSubscriber,
             SignalDistributorOptions signalDistributorOptions,
             ZombieSignalProcessorOptions zombieSignalProcessorOptions,
-            DeadSignalProcessorOptions deadSignalProcessorOptions)
+            DeadSignalProcessorOptions deadSignalProcessorOptions,
+            ISignalDistributorObserver? signalDistributorObserver = null,
+            IZombieSignalProcessorObserver? zombieSignalProcessorObserver = null,
+            IDeadSignalProcessorObserver? deadSignalProcessorObserver = null)
         {
             _signalDistributors = new List<SignalDistributor>(numberOfDistributors);
             
@@ -38,7 +42,8 @@ namespace Oscillation.Hosting.Server
                     distributionGateway,
                     distributionPolicyProvider,
                     signalDistributorOptions,
-                    timeProvider);
+                    timeProvider,
+                    signalDistributorObserver);
                 
                 _signalDistributors.Add(signalDistributor);
             }
@@ -47,12 +52,14 @@ namespace Oscillation.Hosting.Server
                 signalStore,
                 distributionPolicyProvider,
                 zombieSignalProcessorOptions,
-                timeProvider);
+                timeProvider,
+                zombieSignalProcessorObserver);
 
             _deadSignalProcessor = new DeadSignalProcessor(
                 signalStore,
                 deadSignalProcessorOptions,
-                timeProvider);
+                timeProvider,
+                deadSignalProcessorObserver);
             
             _signalNotificationSubscriber = signalNotificationSubscriber;
         }
